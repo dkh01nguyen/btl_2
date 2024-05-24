@@ -727,8 +727,8 @@ public:
     }
         
     ~Configuration() { 
-        if (arr_walls != nullptr) delete arr_walls; 
-        if (arr_fake_walls != nullptr) delete arr_fake_walls; 
+        delete[] arr_walls; 
+        delete[] arr_fake_walls; 
         file.close(); 
     } 
         
@@ -808,6 +808,23 @@ public:
     }; 
 }; 
 
+int findSpecialNumber(int x, int y) {
+    int p = x * y;
+    int s = 0;
+
+    string pStr = to_string(p);
+    
+    while (pStr.length() > 1) {
+        s = 0;
+        for (char c : pStr) {
+            s += c - '0';
+        }
+        pStr = to_string(s);
+    }
+    
+    return stoi(pStr);
+}
+
 class Robot : public MovingObject {
 protected:
     RobotType robot_type;
@@ -817,8 +834,110 @@ public:
     Criminal * criminal;
     Sherlock * sherlock;
     Watson * watson;
-    Robot(int index, const Position &init_pos, Map *map, RobotType robot_type, Criminal *criminal);
+    Robot(int index, const Position &init_pos, Map *map, RobotType robot_type, Criminal *criminal) : MovingObject(index, init_pos, map, ""){}
     virtual ~Robot() {}
+};
+
+class BaseItem {
+protected:
+    ItemType clgv;
+public:
+    friend class TestStudyinPink;
+    virtual void use( Character * obj , Robot * robot ) = 0;
+    virtual bool canUse(Character* obj , Robot * robot ) = 0;
+};
+
+class MagicBook : public BaseItem {
+public:
+    friend class TestStudyinPink;
+    MagicBook() {
+        clgv = MAGIC_BOOK;
+    }
+    ~MagicBook() {}
+    bool canUse(Character * obj, Robot * robot) {
+        if (robot == nullptr) {
+            if (obj->getEXP() <= 350) return true;
+                else return false;
+        }
+    }
+
+    void use(Character * obj, Robot * robot) {
+        obj->setEXP((obj->getEXP() * 1.25));     
+    }
+
+    ItemType getType() {
+        return this->clgv;
+    }
+};
+
+class EnergyDrink : public BaseItem {
+public:
+    friend class TestStudyinPink;
+    EnergyDrink() {
+        clgv = ENERGY_DRINK;
+    }
+    ~EnergyDrink() {}
+    bool canUse(Character * obj, Robot * robot) {
+        if (robot == nullptr) {
+            if (obj->getHP() <= 100) return true;
+                else return false;
+        }
+    }
+
+    void use(Character * obj, Robot * robot) {
+        obj->setEXP((obj->getHP() * 1.2));     
+    }
+};
+
+class FirstAid : public BaseItem {
+public:
+    friend class TestStudyinPink;
+    FirstAid() {
+        clgv = FIRST_AID;
+    }
+    ~FirstAid() {}
+    bool canUse(Character * obj, Robot * robot) {
+        if (robot == nullptr) {
+            if (obj->getEXP() <= 350 || obj->getHP() <= 100) return true;
+                else return false;
+        }
+    }
+
+    void use(Character * obj, Robot * robot) {
+        obj->setEXP((obj->getHP() * 1.5));     
+    }
+};
+
+class ExcemptionCard : public BaseItem {
+public:
+    friend class TestStudyinPink;
+    ExcemptionCard() {
+        clgv = EXCEMPTION_CARD;
+    }
+    ~ExcemptionCard() {}
+    bool canUse(Character * obj, Robot * robot) {
+        if (obj->getName() == "Sherlock" && (obj->getEXP() % 2 != 0)) return true;
+            else return false;
+    }
+
+    void use(Character * obj, Robot * robot) {}
+};
+
+class PassingCard : public BaseItem {
+public:
+    friend class TestStudyinPink;
+    string challenge;
+    PassingCard(string challenge) : challenge(challenge) {
+        clgv = PASSING_CARD;
+    }
+    bool canUse(Character * obj, Robot * robot) {
+        if (obj->getName() == "Watson" && (obj->getEXP() % 2 == 0)) return true;
+            else return false;
+    }
+
+    ~PassingCard() {}
+    
+    void use(Character * obj, Robot * robot) {}
 };
 
 class RobotC : public Robot {
@@ -853,7 +972,7 @@ public:
     ~RobotC() {}
     Position getNextPosition() override {
         if (this->map->isValid(criminal->wherehaveubeen(),this)) 
-            return criminal->wherehaveubeen(); 
+            return this->criminal->wherehaveubeen(); 
         return Position::npos;
     }
 
@@ -915,7 +1034,7 @@ public:
     Position getNextPosition() override {
         Position temP, U, L, D, R; 
         temP = U = L = D = R = this->robot_pos; 
-        int bay_ta_hoi_pen = 10000000000;
+        int bay_ta_hoi_pen = 10000;
 
         U.setRow(this->robot_pos.getRow()-1); 
         D.setRow(this->robot_pos.getRow()+1); 
@@ -1006,7 +1125,7 @@ public:
     Position getNextPosition() override {
         Position temP, U, L, D, R; 
         temP = U = L = D = R = this->robot_pos; 
-        int bay_ta_hoi_pen = 10000000000;
+        int bay_ta_hoi_pen = 10000;
 
         U.setRow(this->robot_pos.getRow()-1); 
         D.setRow(this->robot_pos.getRow()+1); 
@@ -1047,12 +1166,12 @@ public:
         return 0;
     }
 
-    int getDistance(Watson * watson) const {
+    int getDistance() const {
         return Manhattan(watson,robot_pos);
     }
 
     string str() const override {
-        return "Robot[pos=" + robot_pos.str() + ";type=W;dist=" + to_string(getDistance(watson)) + "]";
+        return "Robot[pos=" + robot_pos.str() + ";type=W;dist=" + to_string(getDistance()) + "]";
     }
 
     void move() override {
@@ -1096,7 +1215,7 @@ public:
     Position getNextPosition() override {
         Position temP, U, L, D, R; 
         temP = U = L = D = R = this->robot_pos; 
-        int bay_ta_hoi_pen = 10000000000;
+        int bay_ta_hoi_pen = 10000;
 
         U.setRow(this->robot_pos.getRow()-2); 
         D.setRow(this->robot_pos.getRow()+2); 
@@ -1152,103 +1271,76 @@ public:
     }
 };
 
-int findSpecialNumber(int x, int y) {
-    int p = x * y;
-    int s = 0;
-    
-    string pStr = to_string(p);
-    
-    while (pStr.length() > 1) {
-        s = 0;
-        for (char c : pStr) {
-            s += c - '0';
+class BaseBag {
+protected:
+    struct slot {
+        BaseItem * item;
+        slot* next;
+    };
+    Character* obj;
+
+public:
+    friend class TestStudyinPink;
+    BaseBag() = default;
+    virtual ~BaseBag() = default;
+
+    virtual bool insert(BaseItem *item) = 0;
+    virtual BaseItem *get() = 0;
+    virtual BaseItem *get(ItemType itemType) = 0;
+    virtual string str() const = 0;
+};
+
+
+class SherlockBag : public BaseBag {
+private:
+    int capacity = 13;
+    Sherlock* sherlock;
+    int count = 0;
+    slot* head = NULL;
+public:
+
+    SherlockBag(Sherlock* sherlock) : sherlock(sherlock) {}
+    ~SherlockBag() {}
+
+    bool insert(BaseItem* item) override {
+        if(count >= capacity) {
+            return false;
+        } else {
+            slot * newSlot = new slot;
+            newSlot->item = item;
+            newSlot->next = head;
+            head = newSlot;
+            ++count;
         }
-        pStr = to_string(s);
+        return true;
     }
-    
-    return stoi(pStr);
-}
+};  
 
-class BaseItem {
+class WatsonBag : public BaseBag {
+private:
+    int capacity = 15;
+    Watson* watson;
+    int count = 0;
+    slot* head = NULL;
 public:
-    virtual void use( Character * obj , Robot * robot ) = 0;
-    virtual bool canUse(Character* obj , Robot * robot ) = 0;
-};
 
-class MagicBook : public BaseItem {
-public:
-    bool canUse(Character * obj, Robot * robot) override {
-        if (robot == nullptr) {
-            if (obj->getEXP() <= 350) return true;
-                else return false;
+    WatsonBag(Sherlock* sherlock) : watson(watson) {}
+    ~WatsonBag() {}
+
+    bool insert(BaseItem* item) override {
+        if(count >= capacity) {
+            return false;
+        } else {
+            slot * newSlot = new slot;
+            newSlot->item = item;
+            newSlot->next = head;
+            head = newSlot;
+            ++count;
         }
+        return true;
     }
-
-    void use(Character * obj, Robot * robot) override {
-        obj->setEXP((obj->getEXP() * 1.25));     
-    }
-};
-
-class EnergyDrink : public BaseItem {
-public:
-    bool canUse(Character * obj, Robot * robot) override {
-        if (robot == nullptr) {
-            if (obj->getHP() <= 100) return true;
-                else return false;
-        }
-    }
-
-    void use(Character * obj, Robot * robot) override {
-        obj->setEXP((obj->getHP() * 1.2));     
-    }
-};
-
-class FirstAid : public BaseItem {
-public:
-    bool canUse(Character * obj, Robot * robot) override {
-        if (robot == nullptr) {
-            if (obj->getEXP() <= 350 || obj->getHP() <= 100) return true;
-                else return false;
-        }
-    }
-
-    void use(Character * obj, Robot * robot) override {
-        obj->setEXP((obj->getHP() * 1.5));     
-    }
-};
-
-class ExcemptionCard : public BaseItem {
-public:
-    bool canUse(Character * obj, Robot * robot) override {
-        if (obj->getName() == "Sherlock" && (obj->getEXP() % 2 != 0)) return true;
-            else return false;
-    }
-
-    void use(Character * obj, Robot * robot) override {}
-};
-
-class PassingCard : public BaseItem {
-public:
-    string challenge;
-    PassingCard(string challenge) : challenge(challenge) {}
-    bool canUse(Character * obj, Robot * robot) override {
-        if (obj->getName() == "Watson" && (obj->getEXP() % 2 == 0)) return true;
-            else return false;
-    }
-
-    void use(Character * obj, Robot * robot) override {}
-};
-
+};  
 int main() {
-    
-
-    Position locla("(1,2)");
-
-    cout << locla.str() << endl;
-
-    Configuration config("dcmm.txt");
-
-    cout << config.str();
 
     return 0;
 }
