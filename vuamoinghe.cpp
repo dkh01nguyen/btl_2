@@ -1278,7 +1278,6 @@ protected:
         slot* next;
     };
     Character* obj;
-
 public:
     friend class TestStudyinPink;
     BaseBag() = default;
